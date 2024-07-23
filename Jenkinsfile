@@ -6,7 +6,8 @@ def COLOR_MAP = [
 pipeline {
   agent any
   environment {
-    WORKSPACE = "${env.WORKSPACE}/realworld-cicd-pipeline-project-main"
+    WORKSPACE = "${env.WORKSPACE}"
+    // WORKSPACE = "${env.WORKSPACE}/realworld-cicd-pipeline-project-main"
     NEXUS_CREDENTIAL_ID = 'Nexus-Credential'
     //NEXUS_USER = "$NEXUS_CREDS_USR"
     //NEXUS_PASSWORD = "$Nexus-Token"
@@ -17,14 +18,14 @@ pipeline {
   }
   tools {
     maven 'localMaven'
-    jdk 'localJdk'
+    // jdk 'localJdk'
   }
   stages {
     stage('Build') {
       steps {
-        dir('realworld-cicd-pipeline-project-main/') {
+        //dir('realworld-cicd-pipeline-project-main/') {
         sh 'mvn clean package'
-        }
+       // }
       }
       post {
         success {
@@ -85,23 +86,23 @@ pipeline {
     }
     stage("Nexus Artifact Uploader"){
         steps{
-           dir('realworld-cicd-pipeline-project-main/') {
+          // dir('realworld-cicd-pipeline-project-main/') {
            nexusArtifactUploader(
               nexusVersion: 'nexus3',
               protocol: 'http',
-              nexusUrl: '172.31.90.210:8081',
+              nexusUrl: '172.31.49.188:8081',
               groupId: 'webapp',
               version: "${env.BUILD_ID}-${env.BUILD_TIMESTAMP}",
-              repository: 'maven-project-releases',  //"${NEXUS_REPOSITORY}",
+              repository: 'maven-snapshots',  //"${NEXUS_REPOSITORY}",
               credentialsId: "${NEXUS_CREDENTIAL_ID}",
               artifacts: [
                   [artifactId: 'webapp',
                   classifier: '',
-                  file: "$WORKSPACE/webapp/target/webapp.war",
+                  file: "${WORKSPACE}/webapp/target/webapp.war",
                   type: 'war']
               ]
            )
-        }
+        //}
         }
     }
     stage('Deploy to Development Env') {
@@ -109,11 +110,11 @@ pipeline {
             HOSTS = 'dev'
         }
         steps {
-            dir('realworld-cicd-pipeline-project-main/') {
+            //dir('realworld-cicd-pipeline-project-main/') {
             withCredentials([usernamePassword(credentialsId: 'Ansible-Credential', passwordVariable: 'PASSWORD', usernameVariable: 'USER_NAME')]) {
-                sh "ansible-playbook -i ${WORKSPACE}/ansible-config/aws_ec2.yaml ${WORKSPACE}/deploy.yaml --extra-vars \"ansible_user=$USER_NAME ansible_password=$PASSWORD hosts=tag_Environment_$HOSTS workspace_path=$WORKSPACE\""
+                sh "ansible-playbook -i ${WORKSPACE}/ansible-config/aws_ec2.yaml ${WORKSPACE}/deploy.yaml --extra-vars \"ansible_user=$USER_NAME ansible_password=$PASSWORD hosts=tag_Environment_$HOSTS workspace_path=${WORKSPACE}\""
             }
-          }
+          //}
         }
 
     }
@@ -122,11 +123,11 @@ pipeline {
             HOSTS = 'stage'
         }
         steps {
-            dir('realworld-cicd-pipeline-project-main/') {
+           // dir('realworld-cicd-pipeline-project-main/') {
             withCredentials([usernamePassword(credentialsId: 'Ansible-Credential', passwordVariable: 'PASSWORD', usernameVariable: 'USER_NAME')]) {
                 sh "ansible-playbook -i ${WORKSPACE}/ansible-config/aws_ec2.yaml ${WORKSPACE}/deploy.yaml --extra-vars \"ansible_user=$USER_NAME ansible_password=$PASSWORD hosts=tag_Environment_$HOSTS workspace_path=$WORKSPACE\""
             }
-            }
+            //}
         }
     }
     stage('Quality Assurance Approval') {
@@ -139,14 +140,14 @@ pipeline {
             HOSTS = 'prod'
         }
         steps {
-           dir('realworld-cicd-pipeline-project-main/') {
+           //dir('realworld-cicd-pipeline-project-main/') {
             withCredentials([usernamePassword(credentialsId: 'Ansible-Credential', passwordVariable: 'PASSWORD', usernameVariable: 'USER_NAME')]) {
                 sh "ansible-playbook -i ${WORKSPACE}/ansible-config/aws_ec2.yaml ${WORKSPACE}/deploy.yaml --extra-vars \"ansible_user=$USER_NAME ansible_password=$PASSWORD hosts=tag_Environment_$HOSTS workspace_path=$WORKSPACE\""
             }
-           }
+          // }
         }
          }
-      }
+  }
   post {
     always {
         echo 'Slack Notifications.'
@@ -155,5 +156,24 @@ pipeline {
         message: "*${currentBuild.currentResult}:* Job Name '${env.JOB_NAME}' build ${env.BUILD_NUMBER} \n Build Timestamp: ${env.BUILD_TIMESTAMP} \n Project Workspace: ${env.WORKSPACE} \n More info at: ${env.BUILD_URL}"
     }
   }
+
+  
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
